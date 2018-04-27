@@ -1,0 +1,3 @@
+rootProject.name = 'kthings'
+
+include 'kthings-common', 'kthings-jvm', 'kthings-js'
