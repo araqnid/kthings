@@ -18,6 +18,62 @@ repositories {
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-js:$kotlin_version"
     compile "org.jetbrains.kotlinx:kotlinx-html-js:0.6.9"
+    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-core-js:0.22.5'
     expectedBy project(":kthings-common")
     testCompile "org.jetbrains.kotlin:kotlin-test-js:$kotlin_version"
+}
+
+compileKotlin2Js {
+    //kotlinOptions.friendModulesDisabled =false
+    //kotlinOptions.main = "call"
+    //kotlinOptions.metaInfo = true
+    kotlinOptions.moduleKind = "umd"
+    //kotlinOptions.noStdlib = true
+    //kotlinOptions.outputFile
+    kotlinOptions.sourceMap = true
+    //kotlinOptions.sourceMapEmbedSources
+    //kotlinOptions.sourceMapPrefix
+    //kotlinOptions.target = "v5"
+    //kotlinOptions.typedArrays = true
+}
+
+clean {
+    delete file("node_modules")
+}
+
+sourceSets.all { sourceSet ->
+    tasks.create(sourceSet.getTaskName("unpack", "kotlinJsDependencies")) {
+        group = "build"
+        description = "Unpacks ${sourceSet.name} dependencies to a format Node.js can consume"
+
+        def outputDir = new File(buildDir, name)
+        inputs.property("compileClasspath", sourceSet.compileClasspath)
+        outputs.dir(outputDir)
+
+        doLast {
+            copy {
+                into(outputDir)
+                include "*.js"
+                sourceSet.compileClasspath.forEach { thisJar ->
+                    from zipTree(thisJar)
+                }
+            }
+        }
+    }
+}
+
+task npmInstall(dependsOn: [], type: Exec) {
+    def dependencies = ["source-map-support"]
+
+    outputs.dir(file("node_modules"))
+
+    executable = "npm"
+    args = ["install"] + dependencies
+}
+
+task runJS(dependsOn: [compileKotlin2Js, unpackKotlinJsDependencies, npmInstall], type: Exec) {
+    executable = "node"
+    environment("NODE_PATH", ([new File(buildDir, "unpackKotlinJsDependencies")] +
+            sourceSets.main.getOutput().classesDirs).join(":"))
+    args = ["-r", "source-map-support/register", "-r", archivesBaseName]
 }
