@@ -3,6 +3,7 @@ plugins {
 }
 
 apply plugin: 'kotlin-platform-js'
+apply plugin: 'kotlin-dce-js'
 
 repositories {
     mavenCentral()
@@ -34,6 +35,9 @@ compileKotlin2Js {
     //kotlinOptions.target = "v5"
     //kotlinOptions.typedArrays = true
 }
+
+runDceKotlinJs.dceOptions.devMode = false
+runDceTestKotlinJs.dceOptions.devMode = true
 
 clean {
     delete file("node_modules")
@@ -70,5 +74,13 @@ task runJS(dependsOn: [compileKotlin2Js, unpackKotlinJsDependencies, yarn], type
     script = sourceSets.main.output.classesDirs.collect { new File(it, "${archivesBaseName}.js") }.find { it.file }
     execOverrides {
         it.environment("NODE_PATH", new File(buildDir, "unpackKotlinJsDependencies").toString())
+    }
+}
+
+task runDceJS(dependsOn: [runDceKotlinJs, yarn], type: NodeTask) {
+    options = ["-r", "source-map-support/register"]
+    script = new File(buildDir, "kotlin-js-min/main/${archivesBaseName}.js")
+    execOverrides {
+        it.environment("NODE_PATH", new File(buildDir, "kotlin-js-min/main").toString())
     }
 }
