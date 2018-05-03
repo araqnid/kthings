@@ -1,3 +1,7 @@
+plugins {
+    id "application"
+}
+
 apply plugin: 'kotlin-platform-jvm'
 
 repositories {
@@ -28,7 +32,4 @@ compileTestKotlin {
 }
 sourceCompatibility = "1.8"
 
-task runJVM(type: JavaExec) {
-    classpath = sourceSets.main.runtimeClasspath
-    main = "org.araqnid.kthings.JvmAppKt"
-}
+mainClassName = "org.araqnid.kthings.JvmAppKt"
