@@ -60,7 +60,12 @@ sourceSets.all { sourceSet ->
     }
 }
 
-task runJS(dependsOn: [compileKotlin2Js, unpackKotlinJsDependencies, npmInstall], type: NodeTask) {
+node {
+    download = true
+    version = "8.11.1"
+}
+
+task runJS(dependsOn: [compileKotlin2Js, unpackKotlinJsDependencies, yarn], type: NodeTask) {
     options = ["-r", "source-map-support/register"]
     script = sourceSets.main.output.classesDirs.collect { new File(it, "${archivesBaseName}.js") }.find { it.file }
     execOverrides {
