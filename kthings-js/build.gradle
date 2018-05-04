@@ -70,6 +70,8 @@ node {
 }
 
 task runJS(dependsOn: [compileKotlin2Js, unpackKotlinJsDependencies, yarn], type: NodeTask) {
+    group = "application"
+    description = "Run JS application without optimisation"
     options = ["-r", "source-map-support/register"]
     script = sourceSets.main.output.classesDirs.collect { new File(it, "${archivesBaseName}.js") }.find { it.file }
     execOverrides {
@@ -78,6 +80,8 @@ task runJS(dependsOn: [compileKotlin2Js, unpackKotlinJsDependencies, yarn], type
 }
 
 task runDceJS(dependsOn: [runDceKotlinJs, yarn], type: NodeTask) {
+    group = "application"
+    description = "Run JS application, after applying dead-code elimination"
     options = ["-r", "source-map-support/register"]
     script = new File(buildDir, "kotlin-js-min/main/${archivesBaseName}.js")
     execOverrides {
