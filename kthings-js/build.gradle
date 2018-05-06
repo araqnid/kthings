@@ -121,6 +121,7 @@ task mochaTest(type: NodeTask, dependsOn: [unpackTestKotlinJsDependencies, yarn,
     def testOutputDir = new File(buildDir, "test-results/${name}")
     inputs.files unpackTestKotlinJsDependencies
     inputs.files suppressMainCall
+    inputs.files compileTestKotlin2Js.outputFile
     outputs.dir testOutputDir
 
     group = "verification"
