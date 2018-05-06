@@ -30,7 +30,7 @@ compileKotlin2Js {
     //kotlinOptions.noStdlib = true
     //kotlinOptions.outputFile
     kotlinOptions.sourceMap = true
-    //kotlinOptions.sourceMapEmbedSources
+    kotlinOptions.sourceMapEmbedSources = "always"
     //kotlinOptions.sourceMapPrefix
     //kotlinOptions.target = "v5"
     //kotlinOptions.typedArrays = true
@@ -38,6 +38,7 @@ compileKotlin2Js {
 
 compileTestKotlin2Js {
     kotlinOptions.moduleKind = "commonjs"
+    kotlinOptions.sourceMap = true
 }
 
 runDceKotlinJs.dceOptions.devMode = false
@@ -62,6 +63,7 @@ sourceSets.all { sourceSet ->
             copy {
                 into(outputDir)
                 include "*.js"
+                include "*.js.map"
                 sourceSet.compileClasspath.filter { it.name.endsWith(".jar") }.forEach { thisJar ->
                     from zipTree(thisJar)
                 }
@@ -106,6 +108,7 @@ task suppressMainCall(type: Copy, dependsOn: [compileKotlin2Js]) {
     from(sourceSets.main.output)
     into(outputDir)
     include "${archivesBaseName}.js"
+    include "${archivesBaseName}.js.map"
     filter { line ->
         if (line.contains("main([]);")) {
             "// /* removed by suppressMainCall */ $line"
@@ -126,7 +129,7 @@ task mochaTest(type: NodeTask, dependsOn: [unpackTestKotlinJsDependencies, yarn,
     group = "verification"
     description = "Run Mocha tests"
     script = file('node_modules/mocha/bin/mocha')
-    args = ["--reporter", "mocha-jenkins-reporter", compileTestKotlin2Js.outputFile]
+    args = ["--reporter", "mocha-jenkins-reporter", "-r", "source-map-support/register", compileTestKotlin2Js.outputFile]
     execOverrides {
         def elements = [
                 new File(buildDir, "unpackTestKotlinJsDependencies"),
