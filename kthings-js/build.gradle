@@ -80,7 +80,7 @@ task runJS(dependsOn: [compileKotlin2Js, unpackKotlinJsDependencies, yarn], type
     group = "application"
     description = "Run JS application without optimisation"
     options = ["-r", "source-map-support/register"]
-    script = new File(buildDir, "classes/kotlin/main/${archivesBaseName}.js")
+    script = compileKotlin2Js.outputFile
     execOverrides {
         it.environment("NODE_PATH", new File(buildDir, "unpackKotlinJsDependencies").toString())
     }
@@ -101,10 +101,9 @@ task runDceJS(dependsOn: [runDceKotlinJs, yarn], type: NodeTask) {
 }
 
 task suppressMainCall(type: Copy, dependsOn: [compileKotlin2Js]) {
-    def inputDir = new File(buildDir, "classes/kotlin/main")
     def outputDir = new File(buildDir, name)
 
-    from(inputDir)
+    from(sourceSets.main.output)
     into(outputDir)
     include "${archivesBaseName}.js"
     filter { line ->
