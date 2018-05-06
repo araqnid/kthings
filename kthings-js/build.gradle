@@ -36,8 +36,14 @@ compileKotlin2Js {
     //kotlinOptions.typedArrays = true
 }
 
+compileTestKotlin2Js {
+    kotlinOptions.moduleKind = "commonjs"
+}
+
 runDceKotlinJs.dceOptions.devMode = false
 runDceTestKotlinJs.dceOptions.devMode = true
+
+assemble.dependsOn(tasks.runDceKotlinJs)
 
 clean {
     delete file("node_modules")
@@ -49,14 +55,14 @@ sourceSets.all { sourceSet ->
         description = "Unpacks ${sourceSet.name} dependencies to a format Node.js can consume"
 
         def outputDir = new File(buildDir, name)
-        inputs.property("compileClasspath", sourceSet.compileClasspath)
+        inputs.property("classpath", sourceSet.runtimeClasspath)
         outputs.dir(outputDir)
 
         doLast {
             copy {
                 into(outputDir)
                 include "*.js"
-                sourceSet.compileClasspath.forEach { thisJar ->
+                sourceSet.compileClasspath.filter { it.name.endsWith(".jar") }.forEach { thisJar ->
                     from zipTree(thisJar)
                 }
             }
@@ -74,7 +80,7 @@ task runJS(dependsOn: [compileKotlin2Js, unpackKotlinJsDependencies, yarn], type
     group = "application"
     description = "Run JS application without optimisation"
     options = ["-r", "source-map-support/register"]
-    script = new File(projectDir, "build/classes/kotlin/main/${archivesBaseName}.js")
+    script = new File(buildDir, "classes/kotlin/main/${archivesBaseName}.js")
     execOverrides {
         it.environment("NODE_PATH", new File(buildDir, "unpackKotlinJsDependencies").toString())
     }
@@ -86,6 +92,51 @@ task runDceJS(dependsOn: [runDceKotlinJs, yarn], type: NodeTask) {
     options = ["-r", "source-map-support/register"]
     script = new File(buildDir, "kotlin-js-min/main/${archivesBaseName}.js")
     execOverrides {
-        it.environment("NODE_PATH", new File(buildDir, "kotlin-js-min/main").toString())
+        def elements = [
+                new File(buildDir, "kotlin-js-min/main")
+        ]
+        logger.info("NODE_PATH=${elements.collect { it.toString() }.join(":")}")
+        it.environment("NODE_PATH", elements.collect { it.toString() }.join(":"))
     }
 }
+
+task suppressMainCall(type: Copy, dependsOn: [compileKotlin2Js]) {
+    def inputDir = new File(buildDir, "classes/kotlin/main")
+    def outputDir = new File(buildDir, name)
+
+    from(inputDir)
+    into(outputDir)
+    include "${archivesBaseName}.js"
+    filter { line ->
+        if (line.contains("main([]);")) {
+            "// /* removed by suppressMainCall */ $line"
+        }
+        else {
+            line
+        }
+    }
+}
+
+task mochaTest(type: NodeTask, dependsOn: [unpackTestKotlinJsDependencies, yarn, suppressMainCall, testClasses]) {
+    def testOutputDir = new File(buildDir, "test-results/${name}")
+    inputs.files unpackTestKotlinJsDependencies
+    inputs.files suppressMainCall
+    outputs.dir testOutputDir
+
+    group = "verification"
+    description = "Run Mocha tests"
+    script = file('node_modules/mocha/bin/mocha')
+    args = ["--reporter", "mocha-jenkins-reporter", compileTestKotlin2Js.outputFile]
+    execOverrides {
+        def elements = [
+                new File(buildDir, "unpackTestKotlinJsDependencies"),
+                new File(buildDir, "suppressMainCall")
+        ]
+        logger.info("NODE_PATH=${elements.collect { it.toString() }.join(":")}")
+        it.environment("NODE_PATH", elements.collect { it.toString() }.join(":"))
+        it.environment("JUNIT_REPORT_PATH", "${testOutputDir}/test-reports.xml")
+        it.environment("JUNIT_REPORT_STACK", "1")
+    }
+}
+
+check.dependsOn(mochaTest)
