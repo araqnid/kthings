@@ -41,7 +41,7 @@ compileTestKotlin2Js {
 }
 
 runDceKotlinJs.dceOptions.devMode = false
-runDceTestKotlinJs.dceOptions.devMode = true
+runDceTestKotlinJs.enabled = false
 
 assemble.dependsOn(tasks.runDceKotlinJs)
 
