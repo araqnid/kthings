@@ -70,10 +70,11 @@ node {
 }
 
 task runJS(dependsOn: [compileKotlin2Js, unpackKotlinJsDependencies, yarn], type: NodeTask) {
+    inputs.files sourceSets.main.output
     group = "application"
     description = "Run JS application without optimisation"
     options = ["-r", "source-map-support/register"]
-    script = sourceSets.main.output.classesDirs.collect { new File(it, "${archivesBaseName}.js") }.find { it.file }
+    script = new File(projectDir, "build/classes/kotlin/main/${archivesBaseName}.js")
     execOverrides {
         it.environment("NODE_PATH", new File(buildDir, "unpackKotlinJsDependencies").toString())
     }
